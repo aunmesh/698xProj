@@ -85,9 +85,6 @@ def gen_sample_z(z_posterior):
 
 	return result
 
-
-
-
 '''
 Args:
 	minibatch - data and metadata
@@ -132,7 +129,7 @@ def Gibbs_sampler(minibatch, lamda, theta , sample_size = 100, burn_in = 100):
 	# CORRECT THE BELOW APPROXIMATION
 	ndk_dot_minus_i =  ndk_dot# shape : Batch_size * T 
 
-	final_sample = []  # list of lists. Each element in the list is of size nd. where nd is number of words in that document
+	final_sample = []  # list of lists. Size of each sublist is batch_size.Each element in the sublist is of size nd. where nd is number of words in that document
 	
 	for step in range(num_sim)
 		z_posterior = calc_z_posterior(alpha, theta, ndk_dot_minus_i, data, z_initial) #list of size batch_size, each element is an array of shape nd * T
@@ -141,6 +138,8 @@ def Gibbs_sampler(minibatch, lamda, theta , sample_size = 100, burn_in = 100):
 			final_sample.append( gen_sample_z(z_posterior) )
 
 		z_initial = z_posterior
+
+	return final_sample
 
 
 

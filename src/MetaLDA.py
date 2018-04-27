@@ -13,7 +13,7 @@ class MetaLDA:
 	pi = multinoulli over vocabulary
 	vocab = Dictionary containing vocabulary words
 	'''
-	def __init__(self, mu, sigma_sq, beta, num_topics, vocab, lamda = None, pi = None):
+	def __init__(self, mu, sigma_sq, beta, num_topics, vocab, init_lr = 1.0, lamda = None, pi = None):
 
 		#Store state variables in a dict.
 		self.mu = mu
@@ -22,6 +22,9 @@ class MetaLDA:
 		self.num_topics = num_topics
 		self.vocab = vocab
 		self.vocab_size = len(vocab)
+		
+		self.lr = init_lr
+		self.inference_step = 0
 
 		if lamda == None:
 			self.lamda =  self.Samplelamda(mu, sigma)
@@ -33,10 +36,13 @@ class MetaLDA:
 		else:
 			self.pi = pi
 
-		self.state = {}
+		
 		self.current_iteration = 0
-		self.current_state = {mu:}
 
+		self.current_state = dict(lamda = self.lamda, pi = self.pi)
+
+		self.state = []
+		self.state.append(self.current_state)
 
 	'''
 	performs inference over an minibatch and updates posterior sample and state for self.lamda and self.pi.
@@ -58,8 +64,20 @@ class MetaLDA:
 
 		#Once we have an initial z, we can calculate ndk./i and sample from posterior z.
 
-		#
+		#Update Learning Rate for SGLD and SGRLD optimizers
+		
+		z_sample = Gibbs_sampler(minibatch, self.current_state["lamda"], self.current_state["theta"])
 
-		z_sample = Gibbs_sampler(minibatch, )
+		lamda_new = self.update_lamda(z_sample)
+		theta_new = self.update_theta(z_sample)
+		pi_new = self.convert_theta2pi(theta_new)
 
 
+		#Updates Learning Rate as well as inference_step number
+		self.update_lr()
+
+		self.current_state["lamda"] = lamda_new
+		self.current_state["pi"] = pi_new
+		self.state.append(self.current_state)
+
+	def update_lamda(self, z_sample):
