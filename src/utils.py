@@ -140,3 +140,4 @@ def Gibbs_sampler(minibatch, lamda, theta , sample_size = 2, burn_in = 2):
 				final_sample[b].append( temp_sample[b] )
 		z_initial = gen_sample_z(z_posterior)
 	return final_sample
+

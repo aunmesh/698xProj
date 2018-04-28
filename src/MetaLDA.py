@@ -139,9 +139,13 @@ class MetaLDA:
 	Calculates alpha for 1 document. 
 	Input : meta_doc , array of size F
 	'''
-	def calc_alpha(self, meta_doc):
+	def calc_alpha(self, meta_doc, state=None):
 		#Calculating alpha or Dirichlet prior for mixing proportions for each document
-		log_alpha = self.current_state['lamda'].dot(meta_doc)  #T
+		if(state==None):
+			log_alpha = self.current_state['lamda'].dot(meta_doc)  #T
+		else:
+			log_alpha = state['lamda'].dot(meta_doc)  #T
+
 		alpha = np.exp(log_alpha)
 		return alpha
 
@@ -251,3 +255,82 @@ class MetaLDA:
 		self.current_state["pi"] = pi_new
 		self.current_state["theta"] = theta_new
 		self.state.append(self.current_state)
+
+
+	'''
+	Averages the updates of theta, pi and lamda, using the n latest updates
+	'''
+	def calc_average_state(self, n):
+		assert n < len(self.state), " n should be less than total number of update steps taken {}".format(len(self.state))
+		temp_theta = state[-n]["theta"]
+		temp_pi = state[-n]["pi"]
+		temp_lamda = state[-n]["lamda"]
+		
+		for i in range(1,n):
+			temp_theta+=state[-n + i]["theta"]
+			temp_pi+=state[-n + i]["pi"]
+			temp_lamda+=state[-n + i]["lamda"]
+		
+		avg_state = dict(lamda = temp_lamda/(n*1.0) , theta = temp_theta/(n*1.0) , pi = temp_pi/(n*1.0))
+
+		return avg_state
+
+
+	def calc_nd_dot(self,z):
+		res = np.zeros( (self.num_topics), dtype = float)
+		
+		for t in range(self.num_topics):
+			res[t] = calc_ndk_dot(z,t)
+		return res
+
+
+	'''
+		calculates perplexity on test set
+		test-set is a dict with a train set and test set
+
+	'''
+	def eval_Perplexity(self, test_set , n = 5):
+		
+		train_words = test_set['train']  #List containing words(word indices in vocabulary)
+		test_words = test_set['test']  #List containing words(word indices in vocabulary)
+		test_meta = test_set['metadata']  #numpy array containing meta data for the single document
+
+		avg_state = calc_average_state(n)
+		minibatch_train = dict(data = train_words, metadata = test_meta)
+		
+		z_sample = Gibbs_sampler(minibatch, avg_state['lamda'], avg_state['theta'])[0]
+
+		for i,z in enumerate(z_sample):
+			if(i==0):
+				res = calc_nd_dot(z)
+			else:
+				res+=calc_nd_dot(z)
+
+		res = (res*1.0)/len(z_sample)
+
+		#ndk_dot_train is evaluated on train words size T
+		ndk_dot_train = res
+
+		alpha = calc_alpha(test_meta , avg_state)
+
+		eta = alpha + ndk_dot_train
+
+		eta = eta*1.0 /np.sum(eta)
+
+		#pwd gives array of size V.
+		pwd = eta.reshape((1,-1)).dot(avg_state['pi'])
+
+		neg_log_pwd = -1 * np.log(pwd)
+		log_perplexity = 0
+		
+		for word in test_words:
+			log_perplexity+=neg_log_pwd[int(word)]
+
+		log_perplexity=log_perplexity / (1.0*len(test_words))
+
+		perplexity = np.exp(log_perplexity)
+
+		return perplexity
+
+
+
