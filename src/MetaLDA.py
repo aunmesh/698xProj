@@ -14,7 +14,7 @@ class MetaLDA:
 	pi = multinoulli over vocabulary size: T * V
 	vocab = Dictionary containing vocabulary words
 	'''
-	def __init__(self, mu, sigma_sq, beta, num_topics, vocab, dataset_size , feature_size, a, b, gamma=0.55, lamda = None, pi = None):
+	def __init__(self, mu, sigma_sq, beta, num_topics, vocab, dataset_size , feature_size, a, b, gamma=0.55):
 
 		#Store state variables in a dict.
 		self.a = a*1.0
@@ -24,24 +24,25 @@ class MetaLDA:
 
 		self.mu = mu
 		self.sigma_sq = sigma_sq
+
 		self.beta = beta
 		self.num_topics = num_topics
 		self.vocab = vocab
 		self.vocab_size = len(vocab)
-		self.d = dataset_size
-		self.lr = init_lr
+
+		self.dataset_size = dataset_size
 		self.inference_step = 0
 		self.num_features = feature_size
 
-		if lamda == None:
-			self.lamda =  self.Samplelamda(mu, sigma)
-		else:
-			self.lamda = lamda
+		self.lamda =  np.random.normal(self.mu,1,(self.num_topics,self.num_features)) * (self.sigma_sq ** 0.5) 
 
-		if pi == None:
-			self.pi =  self.SamplePi(self.beta, self.vocab_size)
-		else:
-			self.pi = pi
+		temp = np.ones(self.vocab_size,dtype=float) * self.beta
+		self.theta =  np.random.gamma(temp, size = (self.num_topics, self.vocab_size))
+
+		self.pi = np.zeros((self.num_topics,self.vocab_size), dtype=float)
+
+		for t in range(num_topics):
+			self.pi[t,:] = self.theta[t,:] / np.sum(self.theta[t,:])
 		
 		self.current_iteration = 0
 
@@ -72,7 +73,6 @@ class MetaLDA:
 		return res
 
 
-
 	'''
 	z_doc : All samples of z for a document. Size: nd
 	Output Size: V dimensional vector
@@ -81,8 +81,8 @@ class MetaLDA:
 		res = np.zeros(self.vocab_size, dtype=float)
 		size = 0.0
 		for z in z_doc:
-			ndk = calc_ndk(z, doc, topic_id)
-			ndk_dot = calc_ndk_dot(z , topic_id)
+			ndk = self.calc_ndk(z, doc, topic_id)
+			ndk_dot = self.calc_ndk_dot(z , topic_id)
 			temp = ndk - ndk_dot * self.current_state['pi'][topic_id , :]
 			res+=temp
 			size+=1.0
@@ -97,7 +97,7 @@ class MetaLDA:
 		res = np.zeros(self.vocab_size, dtype=float)
 
 		for ind,doc in enumerate(data):
-			res+=calc_expectation_theta_doc( data[ind], z_sample[ind] , topic_id)
+			res+=self.calc_expectation_theta_doc( data[ind], z_sample[ind] , topic_id)
 
 		return res
 
@@ -116,7 +116,7 @@ class MetaLDA:
 		expectation = np.zeros((self.num_topics, self.vocab_size), dtype=float)
 		
 		for t in range(self.num_topics):
-			expectation[t,:] = calc_expectation_sum_theta(z_sample)
+			expectation[t,:] = self.calc_expectation_sum_theta(z_sample, minibatch,t)
 
 
 		grad_mat = ( self.beta * 1.0) - self.current_state['theta'] + expectation* multiplier
@@ -127,8 +127,6 @@ class MetaLDA:
 		theta_new = self.current_state['theta'] + self.lr * 0.5 * grad_mat + noise_term
 
 		return np.abs(theta_new)
-
-
 
 	def convert_theta2pi(self , theta):
 		res = np.zeros((self.num_topics, self.vocab_size), dtype=float)
@@ -143,7 +141,7 @@ class MetaLDA:
 	'''
 	def calc_alpha(self, meta_doc):
 		#Calculating alpha or Dirichlet prior for mixing proportions for each document
-		log_alpha = lamda.dot(meta_doc)  #T
+		log_alpha = self.current_state['lamda'].dot(meta_doc)  #T
 		alpha = np.exp(log_alpha)
 		return alpha
 
@@ -158,7 +156,7 @@ class MetaLDA:
 		T = self.num_topics
 
 		res = np.ones((T), dtype=float)  #Size : T
-		nd,_ = z_doc[0].shape # nd stores number of words in that document
+		nd = z_doc[0].shape[0] # nd stores number of words in that document
 
 		for ind,sample in enumerate(z_doc):
 			temp2 = np.zeros(T)
@@ -190,10 +188,10 @@ class MetaLDA:
 			z_doc = z_sample[index]  #z_doc is a list containing arrays of size n_doc
 			n_doc = len(doc)
 
-			alpha_doc = calc_alpha(meta_doc)
+			alpha_doc = self.calc_alpha(meta_doc)
 			alpha_sum = np.sum(alpha_doc)
 
-			n_topic = calc_n_topic(z_doc)
+			n_topic = self.calc_n_topic(z_doc)
 
 			phi_t = SP.digamma(alpha_sum) - SP.digamma(alpha_sum + n_doc) + SP.digamma(alpha_doc + n_topic) - SP.digamma(alpha_doc)
 
@@ -207,7 +205,7 @@ class MetaLDA:
 		return res
 
 	def update_lamda(self, minibatch, z_sample):
-		lamda_grad = calc_grad_lamda(minibatch, z_sample)
+		lamda_grad = self.calc_grad_lamda( z_sample, minibatch)
 		noise = np.random.normal(0,1,(self.num_topics, self.num_features)) * (self.lr)**0.5
 		res = self.current_state['lamda'] + 0.5 * self.lr * lamda_grad + noise
 		return res
@@ -244,7 +242,8 @@ class MetaLDA:
 		# theta_new size: T * V
 		theta_new = self.update_theta(minibatch , z_sample)
 		pi_new = self.convert_theta2pi(theta_new)
-		
+		print('Marker')
+		print(type(minibatch))
 		lamda_new = self.update_lamda(minibatch, z_sample)
 		
 		#Updates Learning Rate as well as inference_step number

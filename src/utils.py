@@ -18,14 +18,13 @@ def sample_mixing_prop(alpha):
 args:
 z - 
 
-
 '''
 def calc_ndk_dot(z,T):
 	b_size = len(z)
 	ndk_dot = np.ones((b_size,T), dtype=int)  #Size : Batch_size * T
 
 	for ind,doc in enumerate(z):
-		nd,_ = doc.shape # nd stores number of words in that document
+		nd = doc.shape[0] # nd stores number of words in that document
 
 		temp = z[ind]
 
@@ -50,18 +49,24 @@ def calc_z_posterior(alpha, theta, ndk_dot, data, z):
 	T = alpha.shape[1]
 	
 	for ind,doc in enumerate(data):
-		nd, _  = doc.shape
+		nd  = len(doc)
 		temp = np.zeros((nd,T), dtype=float)
 		
 		for pos,word in enumerate(doc):
 			mul1 = alpha[ind] + ndk_dot[ind] #Size: T
 			
 			for i in range(T):
-				if(z[ind][pos] == i):
-					mul1[i]-=1
-				else:
-					continue
-
+				try:
+					if(z[ind][pos] == i):
+						mul1[i]*=1
+					else:
+						continue
+				except:
+					print("error")
+					print(z[ind][pos])
+					print(ind)
+					print(pos)
+					assert False,"error"
 			wdi = data[ind][pos] # wdi stores the index in vocabulary of the current word
 			theta_wdi = theta[:,wdi]
 			temp[pos] = ( mul1 * theta_wdi ) / np.sum(mul1 * theta_wdi)
@@ -96,15 +101,15 @@ Args:
 
 '''
 
-def Gibbs_sampler(minibatch, lamda, theta , sample_size = 100, burn_in = 100):
+def Gibbs_sampler(minibatch, lamda, theta , sample_size = 2, burn_in = 2):
 
 	num_sim = sample_size + burn_in
 
-	metadata = minibatch['meta-data'] # Batch_size * F
+	metadata = minibatch['metadata'] # Batch_size * F
 	data = minibatch['data'] # List of size Batch-size. Each list element carries a vector of size nd for that document
 
-	assert(lamda.shape[0] == theta.shape[0], "Lambda and Theta array number of rows should be same")
-	assert(lamda.shape[1] == metadata.shape[1], "Lambda and Metadata array number of cols should be same")
+	assert lamda.shape[0] == theta.shape[0], "Lambda and Theta array number of rows should be same"
+	assert lamda.shape[1] == metadata.shape[1], "Lambda and Metadata array number of cols should be same"
 
 	#Calculating alpha or Dirichlet prior for mixing proportions for each document
 	log_alpha = np.transpose( lamda.dot(np.transpose(metadata)) )  # Batch_size * T
@@ -121,7 +126,7 @@ def Gibbs_sampler(minibatch, lamda, theta , sample_size = 100, burn_in = 100):
 	z_initial = []
 
 	for ind,doc in enumerate(data):
-		nd,_ = doc.shape # nd stores number of words in that document
+		nd = len(doc)  # nd stores number of words in that document
 
 		temp = np.random.choice( T, size = nd, p = eta_initial[ind] )
 		z_initial.append(temp)
@@ -146,25 +151,17 @@ def Gibbs_sampler(minibatch, lamda, theta , sample_size = 100, burn_in = 100):
 	return final_sample
 	'''
 
-
-
 	final_sample = [[]] * b_size # list of lists. Each sublist has z_samples for that document
 	
-	for step in range(num_sim)
+	for step in range(num_sim):
+		print(step)
 		z_posterior = calc_z_posterior(alpha, theta, ndk_dot_minus_i, data, z_initial) #list of size batch_size, each element is an array of shape nd * T
 
 		if(step > burn_in):
 			temp_sample = gen_sample_z(z_posterior)
 			for b in range(b_size):
 				final_sample[b].append( temp_sample[b] )
-
-		z_initial = z_posterior
-
+		#print(z_posterior[0])
+		z_initial = gen_sample_z(z_posterior)
+		#print(z_initial[0])
 	return final_sample
-
-
-
-
-
-
-

@@ -10,7 +10,6 @@ def PreProcess(corpus,meta_corpus):
 
 	docs_temp = file(corpus,'r').readlines()
 	docs_temp = [d.strip().split(" ") for d in docs_temp]
-	#print(docs_temp)
 	
 	#Building Vocabulary
 	for doc in docs_temp:
@@ -39,15 +38,11 @@ def PreProcess(corpus,meta_corpus):
 	cols = len(meta_docs[0])
 
 	meta_docs_array = np.zeros((rows,cols),dtype = float)
-	print(meta_docs_array.shape)
-	print(rows)
-	print(cols)
 
 	for r in range(rows):
 		for c in range(cols):
-			print(c)
 			meta_docs_array[r,c] = float(meta_docs[r][c])
 
 	return vocab, docs, meta_docs_array
 
-v,d,m = PreProcess("../data/doc.txt","../data/meta.txt")
+#v,d,m = PreProcess("../data/doc.txt","../data/meta.txt")
