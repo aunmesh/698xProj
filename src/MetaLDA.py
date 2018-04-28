@@ -13,7 +13,7 @@ class MetaLDA:
 	pi = multinoulli over vocabulary
 	vocab = Dictionary containing vocabulary words
 	'''
-	def __init__(self, mu, sigma_sq, beta, num_topics, vocab, init_lr = 1.0, lamda = None, pi = None):
+	def __init__(self, mu, sigma_sq, beta, num_topics, vocab, dataset_size ,init_lr = 1.0, lamda = None, pi = None):
 
 		#Store state variables in a dict.
 		self.mu = mu
@@ -22,7 +22,7 @@ class MetaLDA:
 		self.num_topics = num_topics
 		self.vocab = vocab
 		self.vocab_size = len(vocab)
-		
+		self.d = dataset_size
 		self.lr = init_lr
 		self.inference_step = 0
 
@@ -68,8 +68,8 @@ class MetaLDA:
 		
 		z_sample = Gibbs_sampler(minibatch, self.current_state["lamda"], self.current_state["theta"])
 
-		lamda_new = self.update_lamda(z_sample)
 		theta_new = self.update_theta(z_sample)
+		lamda_new = self.update_lamda(z_sample)
 		pi_new = self.convert_theta2pi(theta_new)
 
 
@@ -79,5 +79,64 @@ class MetaLDA:
 		self.current_state["lamda"] = lamda_new
 		self.current_state["pi"] = pi_new
 		self.state.append(self.current_state)
+
+
+	'''
+	args:
+	z is a numpy aray of size nd
+	output- scalar ndk.
+	'''
+	def calc_ndk_dot(self,z,topic_id):
+		res = np.sum(z == topic_id)
+		return res
+
+	'''
+	res outputs ndk vector , of size V(vocab_size). Num_of times each word in vocab has appeared in the doc from topic_id
+	'''
+	def calc_ndk(self, z, doc, topic_id):
+		res = np.zeros(self.vocab_size)
+		
+		for pos,word in enumerate(doc):
+			if(z[pos] == topic_id):
+				res[int(word)]+=1
+
+		return res
+
+
+
+	'''
+	z_doc : All samples of z for a document. Size: nd
+	Output Size: V dimensional vector
+	'''
+	def calc_expectation_theta_doc( self, doc, z_doc , topic_id):
+		res = np.zeros(self.vocab_size)
+		for z in z_doc:
+			ndk = calc_ndk(z, doc, topic_id)
+			ndk_dot = calc_ndk_dot(z , topic_id)
+			temp = ndk - ndk_dot * self.current_state['pi']
+
+
+	'''
+	Output size: V dimensional vector 
+	'''
+	def calc_expectation_sum_theta(self,z_sample, minibatch, topic_id):
+		data = minibatch['data']
+
+		for ind,doc in enumerate(data):
+			calc_expectation_theta_doc( data[ind], z_sample[ind] , topic_id)
+
+
+	'''
+	minibatch - 
+	Output: - Updated Theta . Dimension - T * V
+	z-sample - size : list of Batch_size. Each element of list is an array of size : nd, nd is number of words in that document
+	'''
+	def update_theta(self, minibatch, z_sample):
+		#Calculate expectation term first
+		expectation
+
+
+
+
 
 	def update_lamda(self, z_sample):

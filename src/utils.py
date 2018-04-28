@@ -14,9 +14,12 @@ def sample_mixing_prop(alpha):
 
 	return result
 
+'''
+args:
+z - 
 
 
-
+'''
 def calc_ndk_dot(z,T):
 	b_size = len(z)
 	ndk_dot = np.ones((b_size,T), dtype=int)  #Size : Batch_size * T
@@ -26,7 +29,7 @@ def calc_ndk_dot(z,T):
 
 		temp = z[ind]
 
-		temp2 = np.ones(T)
+		temp2 = np.zeros(T)
 		for l in range(T):
 			temp2[l] = np.sum(temp==l)
 
@@ -129,7 +132,8 @@ def Gibbs_sampler(minibatch, lamda, theta , sample_size = 100, burn_in = 100):
 	# CORRECT THE BELOW APPROXIMATION
 	ndk_dot_minus_i =  ndk_dot# shape : Batch_size * T 
 
-	final_sample = []  # list of lists. Size of each sublist is batch_size.Each element in the sublist is of size nd. where nd is number of words in that document
+	'''
+	final_sample = []  # list of lists. Size of each sublist is batch_size. Each element in the sublist is of size nd. where nd is number of words in that document
 	
 	for step in range(num_sim)
 		z_posterior = calc_z_posterior(alpha, theta, ndk_dot_minus_i, data, z_initial) #list of size batch_size, each element is an array of shape nd * T
@@ -140,7 +144,23 @@ def Gibbs_sampler(minibatch, lamda, theta , sample_size = 100, burn_in = 100):
 		z_initial = z_posterior
 
 	return final_sample
+	'''
 
+
+
+	final_sample = [[]] * b_size # list of lists. Each sublist has z_samples for that document
+	
+	for step in range(num_sim)
+		z_posterior = calc_z_posterior(alpha, theta, ndk_dot_minus_i, data, z_initial) #list of size batch_size, each element is an array of shape nd * T
+
+		if(step > burn_in):
+			temp_sample = gen_sample_z(z_posterior)
+			for b in range(b_size):
+				final_sample[b].append( temp_sample[b] )
+
+		z_initial = z_posterior
+
+	return final_sample
 
 
 
