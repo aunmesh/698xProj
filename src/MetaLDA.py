@@ -10,7 +10,7 @@ class MetaLDA:
 	lamda = Topic-Metadata correlation matrix
 	beta = (hyperparameter) prior on pi
 	num_topics = number of topics in the model
-	pi = multinoulli over vocabulary
+	pi = multinoulli over vocabulary size: T * V
 	vocab = Dictionary containing vocabulary words
 	'''
 	def __init__(self, mu, sigma_sq, beta, num_topics, vocab, dataset_size ,init_lr = 1.0, lamda = None, pi = None):
@@ -39,7 +39,7 @@ class MetaLDA:
 		
 		self.current_iteration = 0
 
-		self.current_state = dict(lamda = self.lamda, pi = self.pi)
+		self.current_state = dict(lamda = self.lamda, pi = self.pi, theta=self.pi)
 
 		self.state = []
 		self.state.append(self.current_state)
@@ -78,7 +78,9 @@ class MetaLDA:
 
 		self.current_state["lamda"] = lamda_new
 		self.current_state["pi"] = pi_new
+		self.current_state["theta"] = theta_new
 		self.state.append(self.current_state)
+
 
 
 	'''
@@ -109,21 +111,28 @@ class MetaLDA:
 	Output Size: V dimensional vector
 	'''
 	def calc_expectation_theta_doc( self, doc, z_doc , topic_id):
-		res = np.zeros(self.vocab_size)
+		res = np.zeros(self.vocab_size, dtype=float)
+		size = 0.0
 		for z in z_doc:
 			ndk = calc_ndk(z, doc, topic_id)
 			ndk_dot = calc_ndk_dot(z , topic_id)
-			temp = ndk - ndk_dot * self.current_state['pi']
+			temp = ndk - ndk_dot * self.current_state['pi'][topic_id , :]
+			res+=temp
+			size+=1.0
 
+		return res/size
 
 	'''
 	Output size: V dimensional vector 
 	'''
 	def calc_expectation_sum_theta(self,z_sample, minibatch, topic_id):
 		data = minibatch['data']
+		res = np.zeros(self.vocab_size, dtype=float)
 
 		for ind,doc in enumerate(data):
-			calc_expectation_theta_doc( data[ind], z_sample[ind] , topic_id)
+			res+=calc_expectation_theta_doc( data[ind], z_sample[ind] , topic_id)
+
+		return res
 
 
 	'''
@@ -133,7 +142,22 @@ class MetaLDA:
 	'''
 	def update_theta(self, minibatch, z_sample):
 		#Calculate expectation term first
-		expectation
+		b_size, _  = minibatch['metadata'].shape
+		multiplier = (self.dataset_size * 1.0) / b_size
+		expectation = np.zeros((self.num_topics, self.vocab_size), dtype=float)
+		
+		for t in range(self.num_topics):
+			expectation[t,:] = calc_expectation_sum_theta(z_sample)
+
+
+		grad_mat = ( self.beta * 1.0) - self.current_state['theta'] + expectation* multiplier
+
+		noise_term = np.random.normal(0,1,size=(self.num_topics, self.vocab_size)) * ( (self.lr * 1.0 ) ** 0.5)
+
+		noise_term = noise_term * self.current_state['theta']
+		theta_new = self.current_state['theta'] + self.lr * 0.5 * grad_mat + noise_term
+
+		return np.abs(theta_new)
 
 
 
