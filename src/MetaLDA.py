@@ -242,8 +242,6 @@ class MetaLDA:
 		# theta_new size: T * V
 		theta_new = self.update_theta(minibatch , z_sample)
 		pi_new = self.convert_theta2pi(theta_new)
-		print('Marker')
-		print(type(minibatch))
 		lamda_new = self.update_lamda(minibatch, z_sample)
 		
 		#Updates Learning Rate as well as inference_step number

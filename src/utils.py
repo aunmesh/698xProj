@@ -56,17 +56,11 @@ def calc_z_posterior(alpha, theta, ndk_dot, data, z):
 			mul1 = alpha[ind] + ndk_dot[ind] #Size: T
 			
 			for i in range(T):
-				try:
-					if(z[ind][pos] == i):
-						mul1[i]*=1
-					else:
-						continue
-				except:
-					print("error")
-					print(z[ind][pos])
-					print(ind)
-					print(pos)
-					assert False,"error"
+				if(z[ind][pos] == i):
+					mul1[i]-=1
+					break  # As there is only one topic corresponding to a word
+				else:
+					continue
 			wdi = data[ind][pos] # wdi stores the index in vocabulary of the current word
 			theta_wdi = theta[:,wdi]
 			temp[pos] = ( mul1 * theta_wdi ) / np.sum(mul1 * theta_wdi)
@@ -131,37 +125,18 @@ def Gibbs_sampler(minibatch, lamda, theta , sample_size = 2, burn_in = 2):
 		temp = np.random.choice( T, size = nd, p = eta_initial[ind] )
 		z_initial.append(temp)
 
-	ndk_dot = calc_ndk_dot(z_initial,T)
-		
 
-	# CORRECT THE BELOW APPROXIMATION
-	ndk_dot_minus_i =  ndk_dot# shape : Batch_size * T 
-
-	'''
-	final_sample = []  # list of lists. Size of each sublist is batch_size. Each element in the sublist is of size nd. where nd is number of words in that document
-	
-	for step in range(num_sim)
-		z_posterior = calc_z_posterior(alpha, theta, ndk_dot_minus_i, data, z_initial) #list of size batch_size, each element is an array of shape nd * T
-
-		if(step > burn_in):
-			final_sample.append( gen_sample_z(z_posterior) )
-
-		z_initial = z_posterior
-
-	return final_sample
-	'''
 
 	final_sample = [[]] * b_size # list of lists. Each sublist has z_samples for that document
 	
 	for step in range(num_sim):
-		print(step)
-		z_posterior = calc_z_posterior(alpha, theta, ndk_dot_minus_i, data, z_initial) #list of size batch_size, each element is an array of shape nd * T
+		ndk_dot = calc_ndk_dot(z_initial,T)
+
+		z_posterior = calc_z_posterior(alpha, theta, ndk_dot, data, z_initial) #list of size batch_size, each element is an array of shape nd * T
 
 		if(step > burn_in):
 			temp_sample = gen_sample_z(z_posterior)
 			for b in range(b_size):
 				final_sample[b].append( temp_sample[b] )
-		#print(z_posterior[0])
 		z_initial = gen_sample_z(z_posterior)
-		#print(z_initial[0])
 	return final_sample
