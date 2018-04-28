@@ -103,7 +103,7 @@ def Gibbs_sampler(minibatch, lamda, theta , sample_size = 2, burn_in = 2):
 	data = minibatch['data'] # List of size Batch-size. Each list element carries a vector of size nd for that document
 
 	assert lamda.shape[0] == theta.shape[0], "Lambda and Theta array number of rows should be same"
-	assert lamda.shape[1] == metadata.shape[1], "Lambda and Metadata array number of cols should be same"
+	assert lamda.shape[1] == metadata.shape[1], "Lambda and Metadata array number of cols should be same " + str(lamda.shape) + " " + str(metadata.shape)
 
 	#Calculating alpha or Dirichlet prior for mixing proportions for each document
 	log_alpha = np.transpose( lamda.dot(np.transpose(metadata)) )  # Batch_size * T
