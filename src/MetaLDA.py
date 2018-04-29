@@ -68,7 +68,7 @@ class MetaLDA:
 		
 		for pos,word in enumerate(doc):
 			if(z[pos] == topic_id):
-				res[int(word)]+=1
+				res[int(word)] = res[int(word)] + 1
 
 		return res
 
@@ -84,8 +84,8 @@ class MetaLDA:
 			ndk = self.calc_ndk(z, doc, topic_id)
 			ndk_dot = self.calc_ndk_dot(z , topic_id)
 			temp = ndk - ndk_dot * self.current_state['pi'][topic_id , :]
-			res+=temp
-			size+=1.0
+			res = res + temp
+			size = size + 1.0
 
 		return res/size
 
@@ -97,7 +97,7 @@ class MetaLDA:
 		res = np.zeros(self.vocab_size, dtype=float)
 
 		for ind,doc in enumerate(data):
-			res+=self.calc_expectation_theta_doc( data[ind], z_sample[ind] , topic_id)
+			res = res + self.calc_expectation_theta_doc( data[ind], z_sample[ind] , topic_id)
 
 		return res
 
@@ -168,7 +168,7 @@ class MetaLDA:
 			for l in range(T):
 				temp2[l] = np.sum(sample==l)
 
-			res+=temp2
+			res = res + temp2
 
 		return res*1.0/ sample_size  #Size: T
 
@@ -202,9 +202,9 @@ class MetaLDA:
 			ki_t = alpha_doc * phi_t
 			ki_t = ki_t.reshape((self.num_topics, 1))
 			meta_doc_reshaped = meta_doc.reshape((1,self.num_features))
-			res+=ki_t.dot(meta_doc_reshaped)
-		res*=multiplier
-		res+=prior_grad
+			res = res + ki_t.dot(meta_doc_reshaped)
+		res = res * multiplier
+		res = res + prior_grad
 
 		return res
 
@@ -216,7 +216,7 @@ class MetaLDA:
 
 
 	def update_lr(self):
-		self.inference_step+=1
+		self.inference_step = self.inference_step + 1
 		self.lr = self.a * ( (self.inference_step + self.b) ** self.gamma)
 
 	'''
@@ -265,14 +265,11 @@ class MetaLDA:
 		temp_theta = self.state[-n]["theta"]
 		temp_pi = self.state[-n]["pi"]
 		temp_lamda = self.state[-n]["lamda"]
-		
 		for i in range(1,n):
-			temp_theta+=self.state[-n + i]["theta"]
-			temp_pi+=self.state[-n + i]["pi"]
-			temp_lamda+=self.state[-n + i]["lamda"]
-		
+			temp_theta = temp_theta + self.state[-n + i]["theta"]
+			temp_pi = temp_pi + self.state[-n + i]["pi"]
+			temp_lamda = temp_lamda +self.state[-n + i]["lamda"]
 		avg_state = dict(lamda = temp_lamda/(n*1.0) , theta = temp_theta/(n*1.0) , pi = temp_pi/(n*1.0))
-
 		return avg_state
 
 
@@ -304,7 +301,7 @@ class MetaLDA:
 			if(i==0):
 				res = self.calc_nd_dot(z)
 			else:
-				res+=self.calc_nd_dot(z)
+				res = res + self.calc_nd_dot(z)
 
 		res = (res*1.0)/len(z_sample)
 
@@ -323,7 +320,7 @@ class MetaLDA:
 		log_perplexity = 0
 		
 		for word in test_words[0]:
-			log_perplexity+=neg_log_pwd[int(word)]
+			log_perplexity = log_perplexity + neg_log_pwd[int(word)]
 
 		log_perplexity=log_perplexity / (1.0*len(test_words))
 

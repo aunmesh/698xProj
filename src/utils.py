@@ -10,7 +10,11 @@ def sample_mixing_prop(alpha):
 	result = np.ones((b_size,T) , dtype=float)
 
 	for i in range(b_size):
-		result[i] = np.random.dirichlet(alpha[i])
+		try:
+			result[i] = np.random.dirichlet(alpha[i])
+		except:
+			print("error")
+			print(alpha[i])
 
 	return result
 
@@ -95,7 +99,7 @@ Args:
 
 '''
 
-def Gibbs_sampler(minibatch, lamda, theta , sample_size = 2, burn_in = 2):
+def Gibbs_sampler(minibatch, lamda, theta , sample_size = 2, burn_in = 5):
 
 	num_sim = sample_size + burn_in
 
@@ -108,6 +112,7 @@ def Gibbs_sampler(minibatch, lamda, theta , sample_size = 2, burn_in = 2):
 	#Calculating alpha or Dirichlet prior for mixing proportions for each document
 	log_alpha = np.transpose( lamda.dot(np.transpose(metadata)) )  # Batch_size * T
 	alpha = np.exp(log_alpha)
+	#print(lamda)
 
 	T = lamda.shape[0]
 	F = lamda.shape[1]
