@@ -1,6 +1,7 @@
 import numpy as np
 from utils import *
 import scipy.special as SP
+from copy import copy as cp
 
 class MetaLDA:
 
@@ -254,7 +255,7 @@ class MetaLDA:
 		self.current_state["lamda"] = lamda_new
 		self.current_state["pi"] = pi_new
 		self.current_state["theta"] = theta_new
-		self.state.append(self.current_state)
+		self.state.append( cp(self.current_state) )
 
 
 	'''
