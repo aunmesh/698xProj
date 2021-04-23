@@ -5,18 +5,24 @@ from copy import copy as cp
 
 class MetaLDA:
 
-	'''
-	Constructor for MetaLDA:
-	mu = Mean of Topic-Metadata correlation matrix
-	sigma_sq = Variance of the matrix
-	lamda = Topic-Metadata correlation matrix , size : T * F
-	beta = (hyperparameter) prior on pi
-	num_topics = number of topics in the model
-	pi = multinoulli over vocabulary size: T * V
-	vocab = Dictionary containing vocabulary words
-	'''
 	def __init__(self, mu, sigma_sq, beta, num_topics, vocab, dataset_size , feature_size, a, b, gamma=0.55):
 
+		'''
+		Constructor for MetaLDA:
+		mu = Mean of Topic-Metadata correlation matrix
+		sigma_sq = Variance of the matrix
+		lamda = Topic-Metadata correlation matrix , size : T * F
+		beta = (hyperparameter) prior on pi
+		num_topics = number of topics in the model
+		pi = multinoulli over vocabulary size: T * V
+		vocab = Dictionary containing vocabulary words
+		
+		key:
+		T - description of T
+		F - description of F
+		V - description of V
+		'''
+		
 		#Store state variables in a dict.
 		self.a = a*1.0
 		self.b = b*1.0
